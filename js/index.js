@@ -75,13 +75,23 @@ $(document).ready(function() {
 			});
 		}
 
+		this.drawText = function(){
+			DrawEverything();
+			ctx.save(); // push state on state stack
+			ctx.translate(10, 0);  
+			ctx.fillStyle = "white";  
+			ctx.fillText(this.cityName, this.xPos, this.yPos);  
+			ctx.restore();
+			
+		}
+
 		this.moveToLongitude = function(){
 
 			//No Animation
 			this.xPos =  canvasWidth/2;
 			this.yPos =  this.yCoef * (canvasHeight / 100);
 			this.drawCity("red");
-			this.drawToolTip(); 
+			//this.drawToolTip(); 
 
 			//With Animation 
 			/*
@@ -110,7 +120,7 @@ $(document).ready(function() {
 			this.xPos =  this.xCoef * (canvasWidth / 100);
 			this.yPos =  canvasHeight/2;
 			this.drawCity("green");
-			this.drawToolTip();
+			//this.drawToolTip();
 		}
 
 	};   
@@ -195,35 +205,6 @@ $(document).ready(function() {
 	.error(function() { alert("error"); })
 	.complete(function() { 
 
-		//Start Drawing on Canvas
-		function DrawEverything(){
-
-			drawBegining(canvasWidth, canvasHeight);	
-
-			for(var i = 0; i < dataArray.length; i++){
-				dataArray[i][10].updateCoefs(canvasWidth, canvasHeight);
-				dataArray[i][10].drawCity();
-				dataArray[i][10].drawToolTip();
-			} 
-			
-		}
-
-		function drawBegining(canvasWidth, canvasHeight){
-			console.log("Cleaning Up");
-			ctx.fillStyle   = 'rgba(50, 50, 50, 1)'; // set canvas background color
-			ctx.fillRect  (0, 0,canvasWidth, canvasHeight);
-			//Draw the Equators
-				ctx.strokeStyle = 'rgba(255, 255, 255, 75)';
-				//Equators
-				ctx.moveTo(canvasWidth/2,0);
-				ctx.lineTo(canvasWidth/2,canvasHeight);
-				ctx.stroke();
-				// Vertical... whatever the name is, it's greenwich meridian right?
-				ctx.moveTo(0,canvasHeight/2);
-				ctx.lineTo(canvasWidth,canvasHeight/2);
-				ctx.stroke();
-		};
-
 		function resizeCanvas(direction){
 			if(direction){
 				canvasWidth += 100;
@@ -238,6 +219,24 @@ $(document).ready(function() {
 		}
 
 		DrawEverything();
+
+		//On MouseOver
+		$(function(){
+			canvas.mousemove(function(event) {
+				for(var i = 0; i < dataArray.length; i++){
+					var xPos = dataArray[i][10].xPos;
+					var yPos = dataArray[i][10].yPos;
+					if((event.pageX < (xPos + 5) && event.pageX > (xPos - 5)) && (event.pageY < (yPos + canvasMargin + 5) && event.pageY > (yPos + canvasMargin - 5))) {
+						dataArray[i][10].drawText();
+						console.log("Draw!Text: " + dataArray[i][10].cityName + " - " + xPos + " / " + yPos + " --- " + event.pageX + " / " + event.pageY);
+					}
+					else {
+						console.log(".");
+					}
+					
+				} 
+			});
+		});
 
 		//If a key is pressed
 		$(function(){
@@ -329,6 +328,34 @@ $(document).ready(function() {
   		}
 
 	}
+
+	//Start Drawing on Canvas
+	function DrawEverything(){
+
+		drawBegining(canvasWidth, canvasHeight);	
+
+		for(var i = 0; i < dataArray.length; i++){
+			dataArray[i][10].updateCoefs(canvasWidth, canvasHeight);
+			dataArray[i][10].drawCity();
+		} 
+		
+	}
+
+	function drawBegining(canvasWidth, canvasHeight){
+		console.log("Cleaning Up");
+		ctx.fillStyle   = 'rgba(50, 50, 50, 1)'; // set canvas background color
+		ctx.fillRect  (0, 0,canvasWidth, canvasHeight);
+		//Draw the Equators
+			ctx.strokeStyle = 'rgba(255, 255, 255, 75)';
+			//Equators
+			ctx.moveTo(canvasWidth/2,0);
+			ctx.lineTo(canvasWidth/2,canvasHeight);
+			ctx.stroke();
+			// Vertical... whatever the name is, it's greenwich meridian right?
+			ctx.moveTo(0,canvasHeight/2);
+			ctx.lineTo(canvasWidth,canvasHeight/2);
+			ctx.stroke();
+	};
 
 });
 
