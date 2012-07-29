@@ -9,7 +9,115 @@ $(document).ready(function() {
 	var canvasWidth = 0;
 	var canvasHeight = 0;
 
-	$.getJSON('/CityComparisson/data/CityList.json', function(data) {		
+	var canvasMargin = 0;
+		
+
+	var c   = document.getElementById("main-canvas"),
+		ctx = c.getContext("2d"), 
+		canvas = $("#main-canvas"),
+		mainDiv = $("#main-div"),
+		canvasContainer = $("#canvas-container");
+
+	/* City Object */ // Must be Global
+
+	function cityObject(xInput, yInput, nameInput, populationInput){
+
+		//Basic Info
+		this.cityName = nameInput;
+		this.cityNameSpan = "";
+		this.Population = populationInput;
+		this.tootTip = this.cityName + "<br/>" + this.Population + " ";
+		//Position
+		this.xCoef = xInput;
+		this.yCoef = yInput;
+		this.xPos = 0; 
+		this.yPos = 0; 
+		this.xPos;
+		this.yPos;
+		//Animation
+		this.aFrames = 0;
+		this.xTarget;
+		this.yTarget;
+
+		this.updateCoefs = function(canvasWidth, canvasHeight){
+			this.xPos = this.xCoef * (canvasWidth / 100);
+			this.yPos = this.yCoef * (canvasHeight / 100);
+		} 
+
+		this.drawCity = function(){
+			//Draw the Rectangle
+			console.log("Drawing City - " + this.cityName + " / " + this.xPos + " / " + this.yPos);
+			ctx.beginPath();
+				ctx.fillStyle = "rgba(255,255,255,0.3)";
+				ctx.arc(this.xPos, this.yPos, 5, 0, Math.PI*2, true);
+			ctx.closePath();
+				ctx.strokeStyle = "rgba(255,255,255,1)";
+				ctx.stroke(); 
+				ctx.fill();
+			//An OUter Circle
+			ctx.beginPath();
+				ctx.fillStyle = "rgba(255,255,255,0)";
+				ctx.arc(this.xPos, this.yPos, 10, 0, Math.PI*2, true);
+			ctx.closePath();
+				ctx.strokeStyle = "rgba(255,255,255,0.5)";
+				ctx.stroke(); 
+				ctx.fill();
+		};
+
+		this.drawToolTip = function(){
+			this.cityNameSpan = "<span class='citySpan' style='position:absolute;top: "+(this.yPos+canvasMargin-5)+"px; width: 10px; height: 10px; left:"+(this.xPos-5)+"px;display:block;' id='"+this.cityName+"'></span>";
+			//Put some Words on it
+			mainDiv.append(this.cityNameSpan);
+			$("#"+this.cityName).simpletip({
+				// Configuration properties
+				content: this.tootTip,
+				fixed: false
+			});
+		}
+
+		this.moveToLongitude = function(){
+
+			//No Animation
+			this.xPos =  canvasWidth/2;
+			this.yPos =  this.yCoef * (canvasHeight / 100);
+			this.drawCity("red");
+			this.drawToolTip(); 
+
+			//With Animation 
+			/*
+			this.xTarget = canvasWidth/2;
+			this.yTarget = this.yPos;
+
+			this.xDistance = (this.xTarget - this.xPos)/100;
+			this.yDistance = (this.yTarget - this.yPos)/100;
+			console.log(this.xTarget + " / " + this.yTarget);
+			console.log(this.xDistance + " / " + this.yDistance);
+
+			for(this.aFrames = 100; this.aFrames > 0; this.aFrames--){
+				ctx.fillStyle   = 'rgba(50, 50, 50, 75)'; // set canvas background color
+				ctx.fillRect  (0, 0, canvasWidth, canvasHeight);
+
+				console.log(this.aFrames+ " - Frame");
+				this.yPos =  this.yPos - this.yDistance;
+				this.xPos =  this.xPos - this.xDistance;
+				console.log(this.xPos + " / " + this.yPos);
+				this.drawCity();
+			}*/
+		}
+
+		this.moveToLatitude = function(){
+			//No Animation
+			this.xPos =  this.xCoef * (canvasWidth / 100);
+			this.yPos =  canvasHeight/2;
+			this.drawCity("green");
+			this.drawToolTip();
+		}
+
+	};   
+
+	$.getJSON('../CityComparisson/data/CityList.json', function(data) {		
+
+		SizeCanvas($(document).height(), $(document).width(), true);
 
 		$.each(data, function(key, val) {
 
@@ -78,15 +186,111 @@ $(document).ready(function() {
 		  	}
 		  	dataArray[key].push(xCoef);
 		  	dataArray[key].push(yCoef);
-		});
-	});
+		  	var cityName = val["City"].replace(/[^a-zA-Z-\-áíã]/g, "_"); //The tooltip, for some reason, is not taking spaces right now
+		  	dataArray[key].push(new cityObject(xCoef, yCoef, cityName, val["Population"]));
 
-	function SizeCanvas(docHeight, docWidth){
+		});
+	})
+	.success(function() { console.log("Succes"); })
+	.error(function() { alert("error"); })
+	.complete(function() { 
+
+		//Start Drawing on Canvas
+		function DrawEverything(){
+
+			drawBegining(canvasWidth, canvasHeight);	
+
+			for(var i = 0; i < dataArray.length; i++){
+				dataArray[i][10].updateCoefs(canvasWidth, canvasHeight);
+				dataArray[i][10].drawCity();
+				dataArray[i][10].drawToolTip();
+			} 
+			
+		}
+
+		function drawBegining(canvasWidth, canvasHeight){
+			console.log("Cleaning Up");
+			ctx.fillStyle   = 'rgba(50, 50, 50, 1)'; // set canvas background color
+			ctx.fillRect  (0, 0,canvasWidth, canvasHeight);
+			//Draw the Equators
+				ctx.strokeStyle = 'rgba(255, 255, 255, 75)';
+				//Equators
+				ctx.moveTo(canvasWidth/2,0);
+				ctx.lineTo(canvasWidth/2,canvasHeight);
+				ctx.stroke();
+				// Vertical... whatever the name is, it's greenwich meridian right?
+				ctx.moveTo(0,canvasHeight/2);
+				ctx.lineTo(canvasWidth,canvasHeight/2);
+				ctx.stroke();
+		};
+
+		function resizeCanvas(direction){
+			if(direction){
+				canvasWidth += 100;
+				canvasHeight += (100 * (canvasHeight/canvasWidth));
+			}else {
+				canvasWidth -= 100;
+				canvasHeight -= (100 * (canvasHeight/canvasWidth));
+			}
+			canvas.width(canvasWidth);
+			canvas.height(canvasHeight);
+			DrawEverything();
+		}
+
+		DrawEverything();
+
+		//If a key is pressed
+		$(function(){
+			var code = null;
+			$(window).keypress(function(e)
+			{
+				code = (e.keyCode ? e.keyCode : e.which);
+				if(code == 120){
+					mainDiv.html("");
+					for(var i = 0; i < dataArray.length; i++){
+						
+						if(i == 1){
+							drawBegining(canvasWidth, canvasHeight);
+						}
+						dataArray[i][10].moveToLongitude();
+					} 
+				}
+				else if(code == 121){
+					mainDiv.html("");
+					for(var i = 0; i < dataArray.length; i++){
+						if(i == 1){
+							//I have no Idea Why this is necesary, but for some reason it draws the last city if you don't do this...
+							drawBegining(canvasWidth, canvasHeight);
+						}
+						dataArray[i][10].moveToLatitude();
+					} 
+				}
+				else if(code == 61){
+					resizeCanvas(true);
+				}
+				else if(code == 45){
+					resizeCanvas(false)
+				}
+				else {
+					console.log(code);
+				}
+				
+			});
+		});
+
+		//If the window is ReSized
+		$(window).resize(function() {
+			setTimeout(SizeCanvas($(document).height(), $(document).width(), true), 500);
+			DrawEverything();
+		});
+
+	}); //End Complete - Get Json
+
+	function SizeCanvas(docHeight, docWidth, firstTime){
 		//Calculate Canvas Size 
 		// The canvas must be a certain proporation (1:2). So we will calculate the canvas size for it to be as big as possible, while maintining this proportion
-		var canvasMargin = 0;
 		var winProportion = (docHeight / docWidth);
-		
+
 		if(winProportion > (maxLat/maxLon))
 		{
 
@@ -116,72 +320,15 @@ $(document).ready(function() {
 			$("#main-canvas").addClass("xMiddle");
 			
 		}
+		ctx.canvas.width  = canvasWidth;
+  		ctx.canvas.height = canvasHeight;
 
-		console.log("Heiht: " + docHeight + " / " + canvasHeight);
-		console.log("Width: " + docWidth + " / " + canvasWidth);
+  		if(firstTime){
+  			canvasContainer.width(canvasWidth);
+  			canvasContainer.height(canvasHeight);
+  		}
+
 	}
-
-	//Start Drawing on Canvas
-	var DrawEverything = function(){
-		var canvas = document.getElementById("main-canvas");
-		// attaching the sketchProc function to the canvas
-		var processingInstance = new Processing(canvas, sketchProc);
-
-
-		function sketchProc(processing) {
-
-			processing.setup = function(){
-				processing.frameRate(5);
-				processing.background(50);
-				processing.size(canvasWidth, canvasHeight);
-				//Nothing here, really
-				processing.ellipseMode(processing.CENTER);
-				
-			}
-			// Override draw function, by default it will be called 60 times per second
-			processing.draw = function() {
-
-				processing.fill(50,75);
-				processing.rect(0,0,processing.width,processing.height);
-
-				//Draw Equator and that other line
-				processing.stroke(255);
-				processing.line(processing.width/2,0,processing.width/2,processing.height);
-				processing.line(0,processing.height/2,processing.width,processing.height/2);
-
-				//Draw Each LIne
-				for(var i = 0; i < dataArray.length; i++){
-					
-					processing.stroke(255, 10);
-					processing.fill(255,75);
-					processing.text(dataArray[i][0], dataArray[i][8] * (processing.width/100), dataArray[i][9] * (processing.height/100));
-
-					processing.stroke(255);
-					processing.noFill();
-					processing.ellipse(dataArray[i][8] * (processing.width/100), dataArray[i][9] * (processing.height/100), 10, 10);
-
-					processing.stroke(200, 40);
-					processing.line(dataArray[i][8] * (processing.width/100), 0, dataArray[i][8] * (processing.width/100), processing.height);
-					processing.line( 0, dataArray[i][9] * (processing.height/100), processing.width, dataArray[i][9] * (processing.height/100))
-					//console.log(dataArray[i]);
-					if(i == 35){
-						break;
-					}
-				}
-
-			};
-
-		
-		}
-	}
-
-	setTimeout(SizeCanvas($(document).height(), $(document).width()), 500);
-  	DrawEverything();
-
-	$(window).resize(function() {
-  		setTimeout(SizeCanvas($(document).height(), $(document).width()), 500);
-  		DrawEverything();
-	});
 
 });
 
